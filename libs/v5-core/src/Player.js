@@ -55,7 +55,7 @@ const Tools = require('./LocalTools')
  */
 
 const filters = {
-  bassboost: 'bass=g=20,dynaudnorm=f=200',
+  bassboost: 'bass=g=25,dynaudnorm=f=200',
   '8D': 'apulsator=hz=0.08',
   vaporwave: 'aresample=48000,asetrate=48000*0.8',
   nightcore: 'aresample=48000,asetrate=48000*1.25',
@@ -68,11 +68,15 @@ const filters = {
   surrounding: 'surround',
   pulsator: 'apulsator=hz=1',
   subboost: 'asubboost',
-  karaoke: 'stereotools=mlev=0.03',
+  karaoke: 'stereotools=mlev=0.015625,stereotools=mode=lr>rr',
   flanger: 'flanger',
   gate: 'agate',
   haas: 'haas',
-  mcompand: 'mcompand'
+  mcompand: 'mcompand',
+  ok: 'pan=stereo|c0=c0|c1=-1*c1',
+  echo: 'aecho=0.8:0.88:220:0.4',
+  shadow: 'aecho=0.8:0.88:110:0.4',
+  mountain: "aecho=0.85:0.95:560:0.6"
 }
 
 /**
@@ -227,7 +231,7 @@ class Player {
                 duration: i.duration,
                 thumbnail: i.thumbnail,
                 author: i.author,
-                link: i.url,
+                url: i.url,
                 startAT: Date.now(),
                 fromPlaylist: true
               }, null, null)))
@@ -252,7 +256,7 @@ class Player {
                   duration: i.duration,
                   thumbnail: i.maxRes.url,
                   author: { name: i.channel.title },
-                  link: i.url,
+                  url: i.url,
                   startAT: Date.now(),
                   fromPlaylist: true
                 }, null, null)))
@@ -289,9 +293,8 @@ class Player {
             const resultsVideo = res.map(r => {
               r.startAT = Date.now()
               r.title = r.title
-              r.thumbnail = r.maxRes.url
+              r.bestThumbnail = r.maxRes
               r.author = { name: r.channel.title }
-              r.link = r.url
               return r
             })
             Promise.all(resultsVideo.map(async (v) => {
@@ -315,6 +318,24 @@ class Player {
       }
     })
   }
+
+  /**
+   * @description Download Youtube Video As ReadableStream
+   * @returns {Stream.ReadableStream} Readable Stream
+   * @param {string} url
+   * @param {Discord.User|Discord.GuildMember} requester
+   * @param {Object} options
+   * @example
+   * var stream = music.downloadAsStream(msg.guild, args[0], msg.author, { useFFmpeg: true, bitrate: 64 })
+   */
+  /*downloadAsStream(url, options={}) {
+    if (!url) throw new Error("Missing Args.")
+    if (!options.useFFmpeg) {
+      return this.ytdlwrapper.execStream([url, "-f" ,"bestaudio", "--extract-audio", "--audio-quality", `${options.bitrate}K`])
+    } else {
+      return this.ytdlwrapper.execStream([url, "-f" ,"bestaudio", "--extract-audio", "--audio-quality", `${options.bitrate}K`, "--prefer-ffmpeg", "--ffmpeg-location", require("ffmpeg-static")])
+    }
+  }*/
 
   /**
      * Whether a guild is currently playing something
@@ -852,9 +873,9 @@ class Player {
           queue.tracks = queue.tracks.filter((t) => t !== trackFound)
         }
       } else {
-        trackFound = queue.tracks.find((s) => s === track)
-        if (trackFound) {
-          queue.tracks = queue.tracks.filter((s) => s !== trackFound)
+        trackFound = queue.tracks.filter((s) => s.name.includes(track))
+        if (trackFound[0]) {
+          queue.tracks = queue.tracks.filter((t) => t !== trackFound)
         }
       }
       // Resolve
@@ -982,6 +1003,34 @@ class Player {
         queue.playing = queue.previousTrack[queue.previousTrack.length - 1]
         queue.previousTrack = queue.previousTrack.slice(0, -1)
         this._playYTDLStream(queue, false).then(resolve)
+      } catch (e) {
+        reject(e)
+      }
+    })
+  }
+
+  forward(guildID, time) {
+    return new Promise((resolve, reject) => {
+      const queue = this.queues.find((g) => g.guildID === guildID)
+      if (!queue) reject('Not Playing')
+      try {
+        this._playYTDLStream(queue, false, (queue.voiceConnection.dispatcher.streamTime + queue.additionalStreamTime) + time * 1000)
+        .then(resolve)
+        .catch(reject)
+      } catch (e) {
+        reject(e)
+      }
+    })
+  }
+
+  rewind(guildID, time) {
+    return new Promise((resolve, reject) => {
+      const queue = this.queues.find((g) => g.guildID === guildID)
+      if (!queue) reject('Not Playing')
+      try {
+        this._playYTDLStream(queue, false, (queue.voiceConnection.dispatcher.streamTime + queue.additionalStreamTime) - time * 1000)
+        .then(resolve)
+        .catch(reject)
       } catch (e) {
         reject(e)
       }
