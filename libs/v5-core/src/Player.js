@@ -231,7 +231,7 @@ class Player {
                 duration: i.duration,
                 thumbnail: i.thumbnail,
                 author: i.author,
-                link: i.url,
+                url: i.url,
                 startAT: Date.now(),
                 fromPlaylist: true
               }, null, null)))
@@ -256,7 +256,7 @@ class Player {
                   duration: i.duration,
                   thumbnail: i.maxRes.url,
                   author: { name: i.channel.title },
-                  link: i.url,
+                  url: i.url,
                   startAT: Date.now(),
                   fromPlaylist: true
                 }, null, null)))
@@ -268,7 +268,6 @@ class Player {
       const matchSpotifyURL = query.match(/https?:\/\/(?:embed\.|open\.)(?:spotify\.com\/)(?:track\/|\?uri=spotify:track:)((\w|-){22})/)
       if (matchSpotifyURL) {
         const spotifyData = await spotify.getPreview(query).catch(e => resolve([]))
-        console.log(spotifyData)
         query = `${spotifyData.artist} - ${spotifyData.track}`
       }
       // eslint-disable-next-line no-useless-escape
@@ -294,9 +293,8 @@ class Player {
             const resultsVideo = res.map(r => {
               r.startAT = Date.now()
               r.title = r.title
-              r.thumbnail = r.maxRes.url
+              r.bestThumbnail = r.maxRes
               r.author = { name: r.channel.title }
-              r.link = r.url
               return r
             })
             Promise.all(resultsVideo.map(async (v) => {
@@ -320,6 +318,24 @@ class Player {
       }
     })
   }
+
+  /**
+   * @description Download Youtube Video As ReadableStream
+   * @returns {Stream.ReadableStream} Readable Stream
+   * @param {string} url
+   * @param {Discord.User|Discord.GuildMember} requester
+   * @param {Object} options
+   * @example
+   * var stream = music.downloadAsStream(msg.guild, args[0], msg.author, { useFFmpeg: true, bitrate: 64 })
+   */
+  /*downloadAsStream(url, options={}) {
+    if (!url) throw new Error("Missing Args.")
+    if (!options.useFFmpeg) {
+      return this.ytdlwrapper.execStream([url, "-f" ,"bestaudio", "--extract-audio", "--audio-quality", `${options.bitrate}K`])
+    } else {
+      return this.ytdlwrapper.execStream([url, "-f" ,"bestaudio", "--extract-audio", "--audio-quality", `${options.bitrate}K`, "--prefer-ffmpeg", "--ffmpeg-location", require("ffmpeg-static")])
+    }
+  }*/
 
   /**
      * Whether a guild is currently playing something
@@ -987,6 +1003,34 @@ class Player {
         queue.playing = queue.previousTrack[queue.previousTrack.length - 1]
         queue.previousTrack = queue.previousTrack.slice(0, -1)
         this._playYTDLStream(queue, false).then(resolve)
+      } catch (e) {
+        reject(e)
+      }
+    })
+  }
+
+  forward(guildID, time) {
+    return new Promise((resolve, reject) => {
+      const queue = this.queues.find((g) => g.guildID === guildID)
+      if (!queue) reject('Not Playing')
+      try {
+        this._playYTDLStream(queue, false, (queue.voiceConnection.dispatcher.streamTime + queue.additionalStreamTime) + time * 1000)
+        .then(resolve)
+        .catch(reject)
+      } catch (e) {
+        reject(e)
+      }
+    })
+  }
+
+  rewind(guildID, time) {
+    return new Promise((resolve, reject) => {
+      const queue = this.queues.find((g) => g.guildID === guildID)
+      if (!queue) reject('Not Playing')
+      try {
+        this._playYTDLStream(queue, false, (queue.voiceConnection.dispatcher.streamTime + queue.additionalStreamTime) - time * 1000)
+        .then(resolve)
+        .catch(reject)
       } catch (e) {
         reject(e)
       }
