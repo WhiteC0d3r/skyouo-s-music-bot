@@ -1,7 +1,7 @@
 const major = '0'
 var minor = '4'
 const patch = '0'
-const commit = '0'
+const commit = '1'
 const version = `v5.${minor}.${patch}-c${commit}`
 const codename = `Shiron`
 global["v5"] = { version: version, codename: codename }
@@ -71,31 +71,8 @@ if (i) {
 }
 async function updater () {
   try {
-    const res = await fetch('https://raw.githubusercontent.com/NCT-skyouo/skyouo-s-music-bot/master/version.json').catch((e) => { throw e })
-    const info = await res.json().catch((e) => { throw e })
-    const fetchedVer = `v5.${info.latest.minor}.${info.latest.patch}-c${info.latest.commit}`
     coreLogger.info("============= 更新日誌 =============")
-    if (Number(info.latest.major) > Number(major)) {
-      coreLogger.warn('該版本已嚴重過時! 請更新!!!')
-      coreLogger.info('URL: https://github.com/NCT-skyouo/skyouo-s-music-bot')
-      coreLogger.info('目前版本: ' + version)
-      coreLogger.info('最新版本: ' + fetchedVer)
-      coreLogger.info('新版內容: ' + info.latest.update_message)
-    } else if (parseInt(info.latest.minor) > parseInt(minor)) {
-      coreLogger.notice('該版本已過時! 請更新!')
-      coreLogger.info('URL: https://github.com/NCT-skyouo/skyouo-s-music-bot')
-      coreLogger.info('目前版本: ' + version)
-      coreLogger.info('最新版本: ' + fetchedVer)
-      coreLogger.info('新版內容: ' + info.latest.update_message)
-    } else if (Number(info.latest.patch) > Number(patch) && Number(info.minor) <= Number(minor)) {
-      coreLogger.info('有新版本! 請更新!')
-      coreLogger.info('URL: https://github.com/NCT-skyouo/skyouo-s-music-bot')
-      coreLogger.info('目前版本: ' + version)
-      coreLogger.info('最新版本: ' + fetchedVer)
-      coreLogger.info('新版內容: ' + info.latest.update_message)
-    } else {
-      coreLogger.info('目前已更新到最新版!!')
-    }
+    coreLogger.info("由於您使用的是 WhiteC0d3r 支援版, 請手動前往查看! https://github.com/WhiteC0d3r/skyouo-s-music-bot")
     coreLogger.info("====================================")
   } catch (e) {
     coreLogger.showErr(e)
